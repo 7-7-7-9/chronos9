@@ -173,28 +173,37 @@
     }
   });
 
-  function loadIframe() {
-    let url = urlInput.value.trim();
-    if (!url) {
-      alert('Please enter a URL.');
-      return;
-    }
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      url = 'https://' + url;
-    }
-    iframe.srcdoc = '';
+ function loadIframe() {
+  let url = urlInput.value.trim();
+  if (!url) {
+    alert('Please enter a URL.');
+    return;
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+  // Clear srcdoc first and wait for the iframe to update
+  iframe.srcdoc = '';
+  // Use setTimeout to set src on next event loop cycle
+  setTimeout(() => {
     iframe.src = url;
-  }
+  }, 0);
+}
 
-  function loadHtmlCode() {
-    const html = htmlInput.value;
-    if (!html.trim()) {
-      alert('Please paste some HTML code first.');
-      return;
-    }
-    iframe.src = '';
-    iframe.srcdoc = html;
+
+ function loadHtmlCode() {
+  const html = htmlInput.value;
+  if (!html.trim()) {
+    alert('Please paste some HTML code first.');
+    return;
   }
+  // Clear src first and wait before setting srcdoc
+  iframe.src = 'about:blank';
+  setTimeout(() => {
+    iframe.srcdoc = html;
+  }, 0);
+}
+
 
   function downloadIframeContent() {
     try {
