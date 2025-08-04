@@ -89,6 +89,38 @@
     margin-top: 10px;
     color: #0047b3cc;
   }
+  #sourceOverlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #001122ee;
+    color: #0af;
+    z-index: 10000;
+    display: none;
+    flex-direction: column;
+  }
+  #sourceOverlay textarea {
+    flex-grow: 1;
+    background: #000c22;
+    border: none;
+    color: #0af;
+    font-family: monospace;
+    font-size: 14px;
+    padding: 15px;
+    resize: none;
+    outline:none;
+  }
+  #closeSourceBtn {
+    align-self: flex-end;
+    margin: 5px 15px;
+    background: #002277;
+    border-radius: 5px;
+    padding: 8px 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #closeSourceBtn:hover {
+    background: #0044ff;
+  }
 </style>
 </head>
 <body>
@@ -110,19 +142,26 @@
     <button onclick="openDirect()">Open Direct</button>
     <button onclick="openBlank()">Open Blank</button>
     <button onclick="toggleFullscreen()" id="fullscreenBtn">Fullscreen</button>
+    <button onclick="viewHtmlSource()">View HTML Source</button>
   </div>
 
   <iframe id="myIframe" src="" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" title="Content iframe"></iframe>
 
   <div class="footer">Developed for Chromebook – Stylish & Sharp Interface</div>
 
+  <div id="sourceOverlay" role="dialog" aria-modal="true" aria-labelledby="sourceTitle">
+    <button id="closeSourceBtn" onclick="closeHtmlSource()">Close ✖️</button>
+    <textarea readonly id="sourceTextarea" spellcheck="false" aria-label="HTML source code"></textarea>
+  </div>
+
 <script>
   const iframe = document.getElementById('myIframe');
   const urlInput = document.getElementById('urlInput');
   const cloakSelect = document.getElementById('cloakSelect');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
+  const sourceOverlay = document.getElementById('sourceOverlay');
+  const sourceTextarea = document.getElementById('sourceTextarea');
 
-  // Favicon URLs for cloaking
   const faviconMap = {
     classroom: 'https://ssl.gstatic.com/classroom/favicon.png',
     docs: 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico',
@@ -210,12 +249,43 @@
     }
   }
 
-  // Reset button label on fullscreen change (for Escape key, etc)
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
       fullscreenBtn.textContent = 'Fullscreen';
     }
   });
+
+  async function viewHtmlSource() {
+    const url = urlInput.value.trim();
+    if (!url) {
+      alert('Please enter a URL.');
+      return;
+    }
+    let fetchUrl = url;
+    if (!fetchUrl.startsWith('http://') && !fetchUrl.startsWith('https://')) {
+      fetchUrl = 'https://' + fetchUrl;
+    }
+
+    try {
+      // fetch HTML source as text
+      const response = await fetch(fetchUrl, { mode: 'cors' });
+      if(!response.ok) {
+        alert('Failed to fetch HTML source: ' + response.status + ' ' + response.statusText);
+        return;
+      }
+      const text = await response.text();
+      sourceTextarea.value = text;
+      sourceOverlay.style.display = 'flex';
+      sourceTextarea.scrollTop = 0;
+    } catch (e) {
+      alert('Failed to fetch HTML source. Possible CORS restriction or network error.');
+    }
+  }
+
+  function closeHtmlSource() {
+    sourceOverlay.style.display = 'none';
+    sourceTextarea.value = '';
+  }
 </script>
 </body>
 </html>
