@@ -1,44 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Download iframe content</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Custom Iframe Viewer</title>
+<style>
+  body {
+    background: #0a0f21;
+    color: #0af;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    user-select: none;
+  }
+  h2 {
+    color: #08f;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+  input[type="text"] {
+    flex: 1 1 350px;
+    padding: 10px 15px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+    background-color: #1b2240;
+    color: #0af;
+    box-shadow: 0 0 10px #0af44a44 inset;
+  }
+  select {
+    padding: 10px 15px;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    background: #1b2240;
+    color: #0af;
+    cursor: pointer;
+    box-shadow: 0 0 8px #0af44a44 inset;
+  }
+  button {
+    background: linear-gradient(145deg, #0033cc, #001a99);
+    border: none;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: #0af;
+    font-weight: 600;
+    border-radius: 5px;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 0 15px #0077ff88;
+    transition: background 0.3s ease;
+  }
+  button:hover {
+    background: linear-gradient(145deg, #0055ff, #0033cc);
+    box-shadow: 0 0 20px #00aaffaa;
+  }
+  iframe {
+    flex-grow: 1;
+    border: 2px solid #0080ff;
+    border-radius: 8px;
+    width: 100%;
+    min-height: 500px;
+    transition: box-shadow 0.3s ease;
+  }
+  iframe.fullscreen {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 9999;
+    border-radius: 0;
+    box-shadow: 0 0 30px #0077ffcc !important;
+  }
+  .footer {
+    text-align: center;
+    font-size: 14px;
+    margin-top: 10px;
+    color: #0047b3cc;
+  }
+</style>
 </head>
 <body>
-  <h2>Load URL in iframe and download its HTML</h2>
-  <input type="text" id="urlInput" placeholder="Enter URL" size="50" />
-  <button onclick="loadIframe()">Load</button>
-  <button onclick="downloadIframeContent()">Download HTML</button>
+  <h2>📥 Custom Iframe Viewer</h2>
 
-  <div style="margin-top:20px;">
-    <iframe id="myIframe" src="" width="800" height="600" style="border:1px solid #ccc;"></iframe>
+  <div class="controls" aria-label="Controls">
+    <input id="urlInput" type="text" placeholder="Enter URL (e.g. https://example.com)" autocomplete="off" />
+    
+    <select id="cloakSelect" title="Cloak tab as">
+      <option value="">-- Cloak As --</option>
+      <option value="classroom">Google Classroom</option>
+      <option value="docs">Google Docs</option>
+      <option value="drive">Google Drive</option>
+      <option value="none">None</option>
+    </select>
+
+    <button onclick="loadIframe()">Load</button>
+    <button onclick="downloadIframeContent()">Download HTML</button>
+    <button onclick="openDirect()">Open Direct</button>
+    <button onclick="openBlank()">Open Blank</button>
+    <button onclick="toggleFullscreen()" id="fullscreenBtn">Fullscreen</button>
   </div>
 
-  <script>
-    function loadIframe() {
-      let url = document.getElementById('urlInput').value;
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = 'http://' + url;
-      }
-      document.getElementById('myIframe').src = url;
-    }
+  <iframe id="myIframe" src="" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" title="Content iframe"></iframe>
 
-    function downloadIframeContent() {
-      const iframe = document.getElementById('myIframe');
-      try {
-        const doc = iframe.contentDocument || iframe.contentWindow.document;
-        const htmlContent = doc.documentElement.outerHTML;
-        const blob = new Blob([htmlContent], { type: 'text/html' });
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(blob);
-        a.download = 'downloaded_iframe.html';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch (e) {
-        alert('Cannot access iframe content due to cross-origin restrictions.');
-      }
+  <div class="footer">Developed for Chromebook – Stylish & Sharp Interface</div>
+
+<script>
+  const iframe = document.getElementById('myIframe');
+  const urlInput = document.getElementById('urlInput');
+  const cloakSelect = document.getElementById('cloakSelect');
+  const fullscreenBtn = document.getElementById('fullscreenBtn');
+
+  // Favicon URLs for cloaking
+  const faviconMap = {
+    classroom: 'https://ssl.gstatic.com/classroom/favicon.png',
+    docs: 'https://ssl.gstatic.com/docs/documents/images/kix-favicon7.ico',
+    drive: 'https://ssl.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png'
+  };
+
+  function setFavicon(url) {
+    let link = document.querySelector("link[rel~='icon']");
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      document.head.appendChild(link);
     }
-  </script>
+    link.href = url;
+  }
+
+  function setTitle(text) {
+    document.title = text;
+  }
+
+  cloakSelect.addEventListener('change', () => {
+    const val = cloakSelect.value;
+    if (val === 'none' || val === '') {
+      setTitle('Custom Iframe Viewer');
+      setFavicon('');
+    } else {
+      setTitle('Google ' + val.charAt(0).toUpperCase() + val.slice(1));
+      setFavicon(faviconMap[val] || '');
+    }
+  });
+
+  function loadIframe() {
+    let url = urlInput.value.trim();
+    if (!url) {
+      alert('Please enter a URL.');
+      return;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    iframe.src = url;
+  }
+
+  function downloadIframeContent() {
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      const htmlContent = doc.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'downloaded_iframe.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch (e) {
+      alert('Cannot access iframe content due to cross-origin restrictions.');
+    }
+  }
+
+  function openDirect() {
+    let url = urlInput.value.trim();
+    if (!url) {
+      alert('Please enter a URL.');
+      return;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
+  function openBlank() {
+    window.open('about:blank', '_blank', 'noopener,noreferrer');
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      iframe.requestFullscreen().catch(err => {
+        alert(`Error trying to enable full-screen mode: ${err.message}`);
+      });
+      fullscreenBtn.textContent = 'Exit Fullscreen';
+    } else {
+      document.exitFullscreen();
+      fullscreenBtn.textContent = 'Fullscreen';
+    }
+  }
+
+  // Reset button label on fullscreen change (for Escape key, etc)
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      fullscreenBtn.textContent = 'Fullscreen';
+    }
+  });
+</script>
 </body>
 </html>
