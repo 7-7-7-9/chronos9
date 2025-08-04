@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Custom Iframe Viewer</title>
+<title>Custom Iframe Viewer & HTML Renderer</title>
 <style>
   body {
     background: #0a0f21;
@@ -71,7 +71,7 @@
     border: 2px solid #0080ff;
     border-radius: 8px;
     width: 100%;
-    min-height: 500px;
+    min-height: 400px;
     transition: box-shadow 0.3s ease;
   }
   iframe.fullscreen {
@@ -83,52 +83,37 @@
     border-radius: 0;
     box-shadow: 0 0 30px #0077ffcc !important;
   }
+  #htmlInput {
+    flex-basis: 100%;
+    margin-bottom: 10px;
+    height: 120px;
+    background-color: #1b2240;
+    color: #0af;
+    padding: 10px;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 14px;
+    border: none;
+    box-shadow: 0 0 10px #0af44a44 inset;
+    resize: vertical;
+    outline: none;
+  }
   .footer {
     text-align: center;
     font-size: 14px;
     margin-top: 10px;
     color: #0047b3cc;
   }
-  #sourceOverlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: #001122ee;
-    color: #0af;
-    z-index: 10000;
-    display: none;
-    flex-direction: column;
-  }
-  #sourceOverlay textarea {
-    flex-grow: 1;
-    background: #000c22;
-    border: none;
-    color: #0af;
-    font-family: monospace;
-    font-size: 14px;
-    padding: 15px;
-    resize: none;
-    outline:none;
-  }
-  #closeSourceBtn {
-    align-self: flex-end;
-    margin: 5px 15px;
-    background: #002277;
-    border-radius: 5px;
-    padding: 8px 14px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  #closeSourceBtn:hover {
-    background: #0044ff;
-  }
 </style>
 </head>
 <body>
-  <h2>📥 Custom Iframe Viewer</h2>
+  <h2>📥 Custom Iframe Viewer & HTML Renderer</h2>
+
+  <textarea id="htmlInput" placeholder="Or paste raw HTML here and click 'Load HTML' to render"></textarea>
 
   <div class="controls" aria-label="Controls">
     <input id="urlInput" type="text" placeholder="Enter URL (e.g. https://example.com)" autocomplete="off" />
-    
+
     <select id="cloakSelect" title="Cloak tab as">
       <option value="">-- Cloak As --</option>
       <option value="classroom">Google Classroom</option>
@@ -138,6 +123,7 @@
     </select>
 
     <button onclick="loadIframe()">Load</button>
+    <button onclick="loadHtmlCode()">Load HTML</button>
     <button onclick="downloadIframeContent()">Download HTML</button>
     <button onclick="openDirect()">Open Direct</button>
     <button onclick="openBlank()">Open Blank</button>
@@ -145,22 +131,16 @@
     <button onclick="viewHtmlSource()">View HTML Source</button>
   </div>
 
-  <iframe id="myIframe" src="" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" title="Content iframe"></iframe>
+  <iframe id="myIframe" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" title="Content iframe"></iframe>
 
   <div class="footer">Developed for Chromebook – Stylish & Sharp Interface</div>
-
-  <div id="sourceOverlay" role="dialog" aria-modal="true" aria-labelledby="sourceTitle">
-    <button id="closeSourceBtn" onclick="closeHtmlSource()">Close ✖️</button>
-    <textarea readonly id="sourceTextarea" spellcheck="false" aria-label="HTML source code"></textarea>
-  </div>
 
 <script>
   const iframe = document.getElementById('myIframe');
   const urlInput = document.getElementById('urlInput');
   const cloakSelect = document.getElementById('cloakSelect');
   const fullscreenBtn = document.getElementById('fullscreenBtn');
-  const sourceOverlay = document.getElementById('sourceOverlay');
-  const sourceTextarea = document.getElementById('sourceTextarea');
+  const htmlInput = document.getElementById('htmlInput');
 
   const faviconMap = {
     classroom: 'https://ssl.gstatic.com/classroom/favicon.png',
@@ -185,7 +165,7 @@
   cloakSelect.addEventListener('change', () => {
     const val = cloakSelect.value;
     if (val === 'none' || val === '') {
-      setTitle('Custom Iframe Viewer');
+      setTitle('Custom Iframe Viewer & HTML Renderer');
       setFavicon('');
     } else {
       setTitle('Google ' + val.charAt(0).toUpperCase() + val.slice(1));
@@ -202,7 +182,18 @@
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
     }
+    iframe.srcdoc = '';
     iframe.src = url;
+  }
+
+  function loadHtmlCode() {
+    const html = htmlInput.value;
+    if (!html.trim()) {
+      alert('Please paste some HTML code first.');
+      return;
+    }
+    iframe.src = '';
+    iframe.srcdoc = html;
   }
 
   function downloadIframeContent() {
@@ -267,24 +258,16 @@
     }
 
     try {
-      // fetch HTML source as text
       const response = await fetch(fetchUrl, { mode: 'cors' });
       if(!response.ok) {
         alert('Failed to fetch HTML source: ' + response.status + ' ' + response.statusText);
         return;
       }
       const text = await response.text();
-      sourceTextarea.value = text;
-      sourceOverlay.style.display = 'flex';
-      sourceTextarea.scrollTop = 0;
+      alert('--- HTML Source Start ---\n\n' + text.slice(0, 1000) + (text.length > 1000 ? '\n\n...[truncated]' : ''));
     } catch (e) {
       alert('Failed to fetch HTML source. Possible CORS restriction or network error.');
     }
-  }
-
-  function closeHtmlSource() {
-    sourceOverlay.style.display = 'none';
-    sourceTextarea.value = '';
   }
 </script>
 </body>
